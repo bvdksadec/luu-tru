@@ -15,7 +15,6 @@
 
         .card {
             max-width: 1280px;
-            /* ✅ rộng hơn */
             margin: auto;
             background: rgba(255, 255, 255, .06);
             border: 1px solid rgba(255, 255, 255, .12);
@@ -61,12 +60,6 @@
             cursor: pointer
         }
 
-        button.secondary {
-            background: rgba(255, 255, 255, .10);
-            border: 1px solid rgba(255, 255, 255, .14);
-            font-weight: 600
-        }
-
         button:disabled {
             opacity: .5;
             cursor: not-allowed
@@ -83,18 +76,12 @@
             border-radius: 12px
         }
 
-        .tip {
-            font-size: 12px;
-            color: rgba(233, 238, 251, .7)
-        }
-
         .divider {
             height: 1px;
             background: rgba(255, 255, 255, .10);
             margin: 14px 0
         }
 
-        /* ✅ Preview table */
         .preview-wrap {
             margin-top: 12px
         }
@@ -113,6 +100,10 @@
             border-radius: 999px;
             background: rgba(43, 119, 255, .18);
             border: 1px solid rgba(43, 119, 255, .35)
+        }
+
+        .muted {
+            color: rgba(233, 238, 251, .55)
         }
 
         .table-wrap {
@@ -156,20 +147,16 @@
         tr:hover td {
             background: rgba(255, 255, 255, .04)
         }
-
-        .muted {
-            color: rgba(233, 238, 251, .55)
-        }
     </style>
 </head>
 
 <body>
     <div class="card">
         <h1>BÁO CÁO LƯU TRÚ</h1>
-        <label for="fileSrc">Điều trị nội trú -> HDG.Báo cáo lưu trú (xóa cột thừa dòng thừa - giữ tiêu đề)</label>
+        <i>Điều trị nội trú -> HDG.Báo cáo lưu trú.</i>
+
         <div class="row">
             <input id="fileSrc" type="file" accept=".xlsx,.xls" />
-            <button id="btnPreview" class="secondary" disabled>Xem trước</button>
             <button id="btnExport" disabled>Xuất Excel</button>
         </div>
 
@@ -180,11 +167,8 @@
         <div class="preview-wrap">
             <div class="preview-head">
                 <div>
-                    <b>Xem trước dữ liệu</b>
+                    <b>Xem trước dữ liệu (FULL)</b>
                     <span id="previewMeta" class="badge muted">Chưa có</span>
-                </div>
-                <div class="row" style="margin:0">
-                    <button id="btnMore" class="secondary" disabled>Xem thêm 10 dòng</button>
                 </div>
             </div>
 
@@ -205,8 +189,6 @@
     <script>
         const $fileSrc = document.getElementById("fileSrc");
         const $btnExport = document.getElementById("btnExport");
-        const $btnPreview = document.getElementById("btnPreview");
-        const $btnMore = document.getElementById("btnMore");
         const $log = document.getElementById("log");
 
         const $previewThead = document.getElementById("previewThead");
@@ -219,32 +201,10 @@
         let parsed = {
             sheetName: "",
             headerIdx: -1,
-            outRows: [],
-            previewTake: 10
+            outRows: []
         };
 
         function log(msg) { $log.textContent = msg; }
-
-        $fileSrc.addEventListener("change", async (e) => {
-            const f = e.target.files?.[0];
-            if (!f) {
-                srcBuf = null;
-                $btnExport.disabled = true;
-                $btnPreview.disabled = true;
-                $btnMore.disabled = true;
-                parsed = { sheetName: "", headerIdx: -1, outRows: [], previewTake: 10 };
-                renderPreview();
-                log("Chưa chọn file.");
-                return;
-            }
-            srcBuf = await f.arrayBuffer();
-            $btnExport.disabled = false;
-            $btnPreview.disabled = false;
-            $btnMore.disabled = true;
-            parsed = { sheetName: "", headerIdx: -1, outRows: [], previewTake: 10 };
-            renderPreview();
-            log("Đã nhận file: " + f.name + "\nBấm “Xem trước” hoặc “Xuất 2.xlsx”.");
-        });
 
         // ---------- helpers ----------
         function normHeader(s) {
@@ -255,14 +215,16 @@
                 .trim()
                 .toLowerCase();
         }
-        function s(v){
-  if (v === null || v === undefined) return "";
-  const t = String(v).trim();
-  if (!t) return "";
-  const low = t.toLowerCase();
-  if (low === "null" || low === "undefined" || low === "nan" || low === "#n/a") return "";
-  return t;
-}
+
+        // ✅ đổi "null" -> rỗng
+        function s(v) {
+            if (v === null || v === undefined) return "";
+            const t = String(v).trim();
+            if (!t) return "";
+            const low = t.toLowerCase();
+            if (low === "null" || low === "undefined" || low === "nan" || low === "#n/a") return "";
+            return t;
+        }
 
         function isRowEmpty(row) {
             if (!row) return true;
@@ -311,7 +273,6 @@
             return map;
         }
 
-        // ✅ Rule giấy tờ theo đúng ảnh bạn gửi
         function applyDocRules(loai, ten, so) {
             let L = String(loai || "").trim();
             let T = String(ten || "").trim();
@@ -320,36 +281,30 @@
             const upperL = L.toUpperCase();
             const upperT = T.toUpperCase();
 
-            // Không có giấy tờ
             if (!L && !T && !S) {
                 return { loai: "Giấy tờ khác", ten: "Giấy tờ khác", so: "012345678999" };
             }
 
-            // BHYT: rpt có thể ghi "Số thẻ BHYT" ở Loại giấy tờ
             const isBHYT = upperL.includes("BHYT") || upperT === "BHYT" || upperT.includes("BHYT");
             if (isBHYT) {
                 return { loai: "Giấy tờ khác", ten: "BHYT", so: S || "012345678999" };
             }
 
-            // CCCD: Loại giấy tờ là CCCD => cả 2 cột CCCD
             const isCCCD = (upperL === "CCCD" || upperL.includes("CĂN CƯỚC") || upperL.includes("CAN CUOC"));
             if (isCCCD) {
                 return { loai: "CCCD", ten: "CCCD", so: S };
             }
 
-            // Nếu cả 2 là Giấy tờ khác mà số rỗng => gán mặc định
             if (L === "Giấy tờ khác" && T === "Giấy tờ khác" && !S) {
                 return { loai: "Giấy tờ khác", ten: "Giấy tờ khác", so: "012345678999" };
             }
 
-            // Còn lại giữ nguyên, nhưng nếu thiếu tên thì fill nhẹ
             if (!L) L = "Giấy tờ khác";
             if (!T) T = L;
 
             return { loai: L, ten: T, so: S };
         }
 
-        // Header y hệt mẫu 30-1-2 (2 dòng)
         const headerRow1 = [
             "STT", "Họ và tên \n(*)", "Ngày, tháng, năm sinh (*)", "Giới tính \n(*)", "Quốc gia\n (*)", "Quốc tịch\n (*)",
             "Loại giấy tờ (*)", "Tên giấy tờ\n(*)", "Số giấy tờ\n(*)", "Số điện thoại", "Loại cư trú\n (*)", "Tỉnh/TP\n(*)",
@@ -376,101 +331,80 @@
             "< Nhập tên Phòng/Khoa>"
         ];
 
-      function parseSourceToOutRows(buffer){
-  const wbSrc = XLSX.read(buffer, { type:"array", cellDates:true });
-  const srcSheetName = wbSrc.SheetNames[0];
-  const wsSrc = wbSrc.Sheets[srcSheetName];
-  const aoa = XLSX.utils.sheet_to_json(wsSrc, { header: 1, defval: "", raw: false });
+        function parseSourceToOutRows(buffer) {
+            const wbSrc = XLSX.read(buffer, { type: "array", cellDates: true });
+            const srcSheetName = wbSrc.SheetNames[0];
+            const wsSrc = wbSrc.Sheets[srcSheetName];
+            const aoa = XLSX.utils.sheet_to_json(wsSrc, { header: 1, defval: "", raw: false });
 
-  const headerIdx = findHeaderRowIndex(aoa);
-  if (headerIdx === -1){
-    throw new Error("Không tìm thấy dòng header trong rpt (cần có Họ và tên / Loại giấy tờ / Số giấy tờ).");
-  }
-
-  const col = buildColIndexMap(aoa[headerIdx] || []);
-
-  function isGuideRow(row){
-    const joined = (row || []).map(v => String(v ?? "").trim()).join(" ").toLowerCase();
-    if (!joined) return false;
-    return joined.includes("mẫu dữ liệu") || joined.includes("<") || joined.includes("bắt buộc") || joined.includes("giá trị");
-  }
-
-  const nextRow = aoa[headerIdx + 1] || [];
-  const startData = isGuideRow(nextRow) ? (headerIdx + 2) : (headerIdx + 1);
-
-  const out = [];
-  for (let r = startData; r < aoa.length; r++){
-    const row = aoa[r];
-    if (!row || isRowEmpty(row)) continue;
-
-    const hoten = s(row[col.hoten]);
-    const ngaysinh = s(row[col.ngaysinh]);
-    const gioitinh = s(row[col.gioitinh]);
-    const quocgia = s(row[col.quocgia]) || "VNM";
-    const quoctich = "VNM";
-
-    let loai_giayto = s(row[col.loai_giayto]);
-    let ten_giayto  = s(row[col.ten_giayto]);
-    let so_giayto   = s(row[col.so_giayto]);
-
-    const doc = applyDocRules(loai_giayto, ten_giayto, so_giayto);
-    loai_giayto = doc.loai;
-    ten_giayto  = doc.ten;
-    so_giayto   = doc.so;
-
-    const sdt = s(row[col.sdt]);
-    const loai_cutru = s(row[col.loai_cutru]) || "Tạm trú";
-    const tinh = s(row[col.tinh]);
-    const quan = s(row[col.quan]);
-    const phuong = s(row[col.phuong]);
-
-    let diachi_ct = s(row[col.diachi_ct]);
-    if (!diachi_ct) diachi_ct = phuong;
-
-    const tungay = s(row[col.tungay]);
-    const denngay = s(row[col.denngay]);
-    const lydo = s(row[col.lydo]) || "Khám chữa bệnh";
-    const phongkhoa = s(row[col.phongkhoa]);
-
-    out.push([
-      "", hoten, ngaysinh, gioitinh, quocgia, quoctich,
-      loai_giayto, ten_giayto, so_giayto,
-      sdt, loai_cutru, tinh, quan, phuong, diachi_ct,
-      tungay, denngay, lydo, phongkhoa
-    ]);
-  }
-
-  out.forEach((row, i) => row[0] = i + 1);
-  return { srcSheetName, headerIdx, out };
-}
-
-        function renderPreview() {
-            const take = parsed.previewTake;
-            const total = parsed.outRows.length;
-
-            $previewMeta.textContent = total
-                ? `Sheet: ${parsed.sheetName} • Header dòng ${parsed.headerIdx + 1} • Preview ${Math.min(take, total)}/${total}`
-                : "Chưa có";
-
-            // header table
-            $previewThead.innerHTML = `
-        <tr>${headerRow1.map(h => `<th>${String(h).replace(/\n/g, "<br/>")}</th>`).join("")}</tr>
-      `;
-
-            // body
-            if (!total) {
-                $previewTbody.innerHTML = `<tr><td class="muted">Chưa có dữ liệu để xem trước.</td></tr>`;
-                return;
+            const headerIdx = findHeaderRowIndex(aoa);
+            if (headerIdx === -1) {
+                throw new Error("Không tìm thấy dòng header trong rpt (cần có Họ và tên / Loại giấy tờ / Số giấy tờ).");
             }
 
-            const slice = parsed.outRows.slice(0, Math.min(take, total));
-            $previewTbody.innerHTML = slice.map(row => {
-                return `<tr>${row.map(v => `<td>${escapeHtml(String(v ?? ""))}</td>`).join("")}</tr>`;
-            }).join("");
+            const col = buildColIndexMap(aoa[headerIdx] || []);
+
+            function isGuideRow(row) {
+                const joined = (row || []).map(v => String(v ?? "").trim()).join(" ").toLowerCase();
+                if (!joined) return false;
+                return joined.includes("mẫu dữ liệu") || joined.includes("<") || joined.includes("bắt buộc") || joined.includes("giá trị");
+            }
+
+            const nextRow = aoa[headerIdx + 1] || [];
+            const startData = isGuideRow(nextRow) ? (headerIdx + 2) : (headerIdx + 1);
+
+            const out = [];
+            for (let r = startData; r < aoa.length; r++) {
+                const row = aoa[r];
+                if (!row || isRowEmpty(row)) continue;
+
+                const hoten = s(row[col.hoten]);
+                const ngaysinh = s(row[col.ngaysinh]);
+                const gioitinh = s(row[col.gioitinh]);
+                const quocgia = s(row[col.quocgia]) || "VNM";
+                const quoctich = "VNM"; // ✅ luôn VNM
+
+                let loai_giayto = s(row[col.loai_giayto]);
+                let ten_giayto = s(row[col.ten_giayto]);
+                let so_giayto = s(row[col.so_giayto]);
+
+                const doc = applyDocRules(loai_giayto, ten_giayto, so_giayto);
+                loai_giayto = doc.loai;
+                ten_giayto = doc.ten;
+                so_giayto = doc.so;
+
+                const sdt = s(row[col.sdt]);
+                const loai_cutru = s(row[col.loai_cutru]) || "Tạm trú";
+                const tinh = s(row[col.tinh]);
+
+                // ✅ nếu muốn "địa chính mới" luôn rỗng thì bật dòng này:
+                // const quan = "";
+                const quan = s(row[col.quan]); // vẫn dùng s() nên "null" sẽ thành rỗng
+
+                const phuong = s(row[col.phuong]);
+
+                let diachi_ct = s(row[col.diachi_ct]);
+                if (!diachi_ct) diachi_ct = phuong;
+
+                const tungay = s(row[col.tungay]);
+                const denngay = s(row[col.denngay]);
+                const lydo = s(row[col.lydo]) || "Khám chữa bệnh";
+                const phongkhoa = s(row[col.phongkhoa]);
+
+                out.push([
+                    "", hoten, ngaysinh, gioitinh, quocgia, quoctich,
+                    loai_giayto, ten_giayto, so_giayto,
+                    sdt, loai_cutru, tinh, quan, phuong, diachi_ct,
+                    tungay, denngay, lydo, phongkhoa
+                ]);
+            }
+
+            out.forEach((row, i) => row[0] = i + 1);
+            return { srcSheetName, headerIdx, out };
         }
 
         function escapeHtml(str) {
-            return str
+            return String(str ?? "")
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
@@ -478,47 +412,78 @@
                 .replace(/'/g, "&#039;");
         }
 
-        $btnPreview.addEventListener("click", () => {
+        function renderPreviewFull() {
+            const total = parsed.outRows.length;
+            $previewMeta.textContent = total
+                ? `Sheet: ${parsed.sheetName} • Header dòng ${parsed.headerIdx + 1} • Tổng dòng: ${total}`
+                : "Chưa có";
+
+            $previewThead.innerHTML =
+                `<tr>${headerRow1.map(h => `<th>${String(h).replace(/\n/g, "<br/>")}</th>`).join("")}</tr>`;
+
+            if (!total) {
+                $previewTbody.innerHTML = `<tr><td class="muted">Chưa có dữ liệu để xem trước.</td></tr>`;
+                return;
+            }
+
+            // ✅ render FULL (scroll trong .table-wrap)
+            $previewTbody.innerHTML = parsed.outRows.map(row => {
+                return `<tr>${row.map(v => `<td>${escapeHtml(v)}</td>`).join("")}</tr>`;
+            }).join("");
+        }
+
+        // ✅ Chọn file xong tự parse + tự preview
+        async function autoParseAndPreview() {
             try {
                 if (!srcBuf) return;
                 const r = parseSourceToOutRows(srcBuf);
                 parsed.sheetName = r.srcSheetName;
                 parsed.headerIdx = r.headerIdx;
                 parsed.outRows = r.out;
-                parsed.previewTake = 10;
 
-                $btnMore.disabled = parsed.outRows.length <= parsed.previewTake;
-                renderPreview();
-                log("✅ Đã parse dữ liệu để xem trước. Nếu ok thì bấm “Xuất Excel”.");
+                renderPreviewFull();
+                log(
+                    "✅ Đã đọc file & xem trước FULL.\n" +
+                    "Nếu đúng rồi thì bấm “Xuất Excel”.\n" +
+                    `Tổng dòng: ${parsed.outRows.length}`
+                );
             } catch (err) {
                 console.error(err);
-                parsed = { sheetName: "", headerIdx: -1, outRows: [], previewTake: 10 };
-                $btnMore.disabled = true;
-                renderPreview();
-                log("❌ Lỗi xem trước: " + (err?.message || err));
+                parsed = { sheetName: "", headerIdx: -1, outRows: [] };
+                renderPreviewFull();
+                log("❌ Lỗi đọc file: " + (err?.message || err));
             }
-        });
+        }
 
-        $btnMore.addEventListener("click", () => {
-            if (!parsed.outRows.length) return;
-            parsed.previewTake += 10;
-            if (parsed.previewTake >= parsed.outRows.length) $btnMore.disabled = true;
-            renderPreview();
+        $fileSrc.addEventListener("change", async (e) => {
+            const f = e.target.files?.[0];
+            if (!f) {
+                srcBuf = null;
+                $btnExport.disabled = true;
+                parsed = { sheetName: "", headerIdx: -1, outRows: [] };
+                renderPreviewFull();
+                log("Chưa chọn file.");
+                return;
+            }
+            srcBuf = await f.arrayBuffer();
+            $btnExport.disabled = false;
+            parsed = { sheetName: "", headerIdx: -1, outRows: [] };
+            renderPreviewFull();
+            log("Đã nhận file: " + f.name + "\nĐang đọc & tạo xem trước...");
+            autoParseAndPreview();
         });
 
         $btnExport.addEventListener("click", () => {
             try {
                 if (!srcBuf) return;
 
-                // nếu chưa parse preview thì parse luôn
+                // nếu chưa parse (trường hợp hiếm)
                 if (!parsed.outRows.length) {
                     const r = parseSourceToOutRows(srcBuf);
                     parsed.sheetName = r.srcSheetName;
                     parsed.headerIdx = r.headerIdx;
                     parsed.outRows = r.out;
-                    parsed.previewTake = 10;
-                    $btnMore.disabled = parsed.outRows.length <= parsed.previewTake;
-                    renderPreview();
+                    renderPreviewFull();
                 }
 
                 const wbOut = XLSX.utils.book_new();
@@ -548,9 +513,4 @@
     </script>
 </body>
 
-
 </html>
-
-
-
-
