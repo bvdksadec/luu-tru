@@ -254,7 +254,15 @@
                 .trim()
                 .toLowerCase();
         }
-        function s(v) { return (v === null || v === undefined) ? "" : String(v).trim(); }
+        function s(v){
+  if (v === null || v === undefined) return "";
+  const t = String(v).trim();
+  if (!t) return "";
+  const low = t.toLowerCase();
+  if (low === "null" || low === "undefined" || low === "nan" || low === "#n/a") return "";
+  return t;
+}
+
         function isRowEmpty(row) {
             if (!row) return true;
             return row.every(v => !String(v ?? "").trim());
@@ -541,4 +549,5 @@
 
 
 </html>
+
 
