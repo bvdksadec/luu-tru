@@ -367,66 +367,73 @@
             "< Nhập tên Phòng/Khoa>"
         ];
 
-        function parseSourceToOutRows(buffer) {
-            const wbSrc = XLSX.read(buffer, { type: "array", cellDates: true });
-            const srcSheetName = wbSrc.SheetNames[0];
-            const wsSrc = wbSrc.Sheets[srcSheetName];
-            const aoa = XLSX.utils.sheet_to_json(wsSrc, { header: 1, defval: "", raw: false });
+      function parseSourceToOutRows(buffer){
+  const wbSrc = XLSX.read(buffer, { type:"array", cellDates:true });
+  const srcSheetName = wbSrc.SheetNames[0];
+  const wsSrc = wbSrc.Sheets[srcSheetName];
+  const aoa = XLSX.utils.sheet_to_json(wsSrc, { header: 1, defval: "", raw: false });
 
-            const headerIdx = findHeaderRowIndex(aoa);
-            if (headerIdx === -1) {
-                throw new Error("Không tìm thấy dòng header trong rpt (cần có Họ và tên / Loại giấy tờ / Số giấy tờ).");
-            }
+  const headerIdx = findHeaderRowIndex(aoa);
+  if (headerIdx === -1){
+    throw new Error("Không tìm thấy dòng header trong rpt (cần có Họ và tên / Loại giấy tờ / Số giấy tờ).");
+  }
 
-            const col = buildColIndexMap(aoa[headerIdx] || []);
-            const startData = headerIdx + 2;
-            const out = [];
+  const col = buildColIndexMap(aoa[headerIdx] || []);
 
-            for (let r = startData; r < aoa.length; r++) {
-                const row = aoa[r];
-                if (!row || isRowEmpty(row)) continue;
+  function isGuideRow(row){
+    const joined = (row || []).map(v => String(v ?? "").trim()).join(" ").toLowerCase();
+    if (!joined) return false;
+    return joined.includes("mẫu dữ liệu") || joined.includes("<") || joined.includes("bắt buộc") || joined.includes("giá trị");
+  }
 
-                const hoten = s(row[col.hoten]);
-                const ngaysinh = s(row[col.ngaysinh]);
-                const gioitinh = s(row[col.gioitinh]);
-                const quocgia = s(row[col.quocgia]) || "VNM";
-                const quoctich = "VNM";
+  const nextRow = aoa[headerIdx + 1] || [];
+  const startData = isGuideRow(nextRow) ? (headerIdx + 2) : (headerIdx + 1);
 
-                let loai_giayto = s(row[col.loai_giayto]);
-                let ten_giayto = s(row[col.ten_giayto]);
-                let so_giayto = s(row[col.so_giayto]);
+  const out = [];
+  for (let r = startData; r < aoa.length; r++){
+    const row = aoa[r];
+    if (!row || isRowEmpty(row)) continue;
 
-                const doc = applyDocRules(loai_giayto, ten_giayto, so_giayto);
-                loai_giayto = doc.loai;
-                ten_giayto = doc.ten;
-                so_giayto = doc.so;
+    const hoten = s(row[col.hoten]);
+    const ngaysinh = s(row[col.ngaysinh]);
+    const gioitinh = s(row[col.gioitinh]);
+    const quocgia = s(row[col.quocgia]) || "VNM";
+    const quoctich = "VNM";
 
-                const sdt = s(row[col.sdt]);
-                const loai_cutru = s(row[col.loai_cutru]) || "Tạm trú";
-                const tinh = s(row[col.tinh]);
-                const quan = s(row[col.quan]);
-                const phuong = s(row[col.phuong]);
+    let loai_giayto = s(row[col.loai_giayto]);
+    let ten_giayto  = s(row[col.ten_giayto]);
+    let so_giayto   = s(row[col.so_giayto]);
 
-                let diachi_ct = s(row[col.diachi_ct]);
-                if (!diachi_ct) diachi_ct = phuong;
+    const doc = applyDocRules(loai_giayto, ten_giayto, so_giayto);
+    loai_giayto = doc.loai;
+    ten_giayto  = doc.ten;
+    so_giayto   = doc.so;
 
-                const tungay = s(row[col.tungay]);
-                const denngay = s(row[col.denngay]);
-                const lydo = s(row[col.lydo]) || "Khám chữa bệnh";
-                const phongkhoa = s(row[col.phongkhoa]);
+    const sdt = s(row[col.sdt]);
+    const loai_cutru = s(row[col.loai_cutru]) || "Tạm trú";
+    const tinh = s(row[col.tinh]);
+    const quan = s(row[col.quan]);
+    const phuong = s(row[col.phuong]);
 
-                out.push([
-                    "", hoten, ngaysinh, gioitinh, quocgia, quoctich,
-                    loai_giayto, ten_giayto, so_giayto,
-                    sdt, loai_cutru, tinh, quan, phuong, diachi_ct,
-                    tungay, denngay, lydo, phongkhoa
-                ]);
-            }
+    let diachi_ct = s(row[col.diachi_ct]);
+    if (!diachi_ct) diachi_ct = phuong;
 
-            out.forEach((row, i) => row[0] = i + 1);
+    const tungay = s(row[col.tungay]);
+    const denngay = s(row[col.denngay]);
+    const lydo = s(row[col.lydo]) || "Khám chữa bệnh";
+    const phongkhoa = s(row[col.phongkhoa]);
 
-            return { srcSheetName, headerIdx, out };
-        }
+    out.push([
+      "", hoten, ngaysinh, gioitinh, quocgia, quoctich,
+      loai_giayto, ten_giayto, so_giayto,
+      sdt, loai_cutru, tinh, quan, phuong, diachi_ct,
+      tungay, denngay, lydo, phongkhoa
+    ]);
+  }
+
+  out.forEach((row, i) => row[0] = i + 1);
+  return { srcSheetName, headerIdx, out };
+}
 
         function renderPreview() {
             const take = parsed.previewTake;
@@ -534,3 +541,4 @@
 
 
 </html>
+
