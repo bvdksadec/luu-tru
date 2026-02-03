@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Báo Cáo Lưu Trú</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+            margin: 24px;
+            background: #0b1220;
+            color: #e9eefb
+        }
+
+        .card {
+            max-width: 1280px;
+            /* ✅ rộng hơn */
+            margin: auto;
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, .35)
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 20px
+        }
+
+        p {
+            margin: 6px 0;
+            color: rgba(233, 238, 251, .75);
+            line-height: 1.45
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 12px
+        }
+
+        input[type="file"] {
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, .15);
+            background: rgba(0, 0, 0, .25);
+            color: #e9eefb
+        }
+
+        button {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 0;
+            background: #2b77ff;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer
+        }
+
+        button.secondary {
+            background: rgba(255, 255, 255, .10);
+            border: 1px solid rgba(255, 255, 255, .14);
+            font-weight: 600
+        }
+
+        button:disabled {
+            opacity: .5;
+            cursor: not-allowed
+        }
+
+        .log {
+            margin-top: 12px;
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            background: rgba(0, 0, 0, .25);
+            border: 1px solid rgba(255, 255, 255, .12);
+            padding: 10px;
+            border-radius: 12px
+        }
+
+        .tip {
+            font-size: 12px;
+            color: rgba(233, 238, 251, .7)
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, .10);
+            margin: 14px 0
+        }
+
+        /* ✅ Preview table */
+        .preview-wrap {
+            margin-top: 12px
+        }
+
+        .preview-head {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap
+        }
+
+        .badge {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(43, 119, 255, .18);
+            border: 1px solid rgba(43, 119, 255, .35)
+        }
+
+        .table-wrap {
+            margin-top: 10px;
+            overflow: auto;
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 14px;
+            background: rgba(0, 0, 0, .22);
+            max-height: 600px;
+        }
+
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            min-width: 980px
+        }
+
+        th,
+        td {
+            padding: 10px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+            vertical-align: top
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: rgba(10, 18, 32, .95);
+            text-align: left;
+            font-size: 12px;
+            color: rgba(233, 238, 251, .85)
+        }
+
+        td {
+            font-size: 12px;
+            color: rgba(233, 238, 251, .78)
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, .04)
+        }
+
+        .muted {
+            color: rgba(233, 238, 251, .55)
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>BÁO CÁO LƯU TRÚ</h1>
+        <div class="row">
+            <input id="fileSrc" type="file" accept=".xlsx,.xls" />
+            <button id="btnPreview" class="secondary" disabled>Xem trước</button>
+            <button id="btnExport" disabled>Xuất Excel</button>
+        </div>
+
+        <div id="log" class="log">Chưa có dữ liệu.</div>
+
+        <div class="divider"></div>
+
+        <div class="preview-wrap">
+            <div class="preview-head">
+                <div>
+                    <b>Xem trước dữ liệu</b>
+                    <span id="previewMeta" class="badge muted">Chưa có</span>
+                </div>
+                <div class="row" style="margin:0">
+                    <button id="btnMore" class="secondary" disabled>Xem thêm 10 dòng</button>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table id="previewTable">
+                    <thead id="previewThead"></thead>
+                    <tbody id="previewTbody">
+                        <tr>
+                            <td class="muted">Chưa có dữ liệu để xem trước.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        const $fileSrc = document.getElementById("fileSrc");
+        const $btnExport = document.getElementById("btnExport");
+        const $btnPreview = document.getElementById("btnPreview");
+        const $btnMore = document.getElementById("btnMore");
+        const $log = document.getElementById("log");
+
+        const $previewThead = document.getElementById("previewThead");
+        const $previewTbody = document.getElementById("previewTbody");
+        const $previewMeta = document.getElementById("previewMeta");
+
+        let srcBuf = null;
+
+        // cache parsed
+        let parsed = {
+            sheetName: "",
+            headerIdx: -1,
+            outRows: [],
+            previewTake: 10
+        };
+
+        function log(msg) { $log.textContent = msg; }
+
+        $fileSrc.addEventListener("change", async (e) => {
+            const f = e.target.files?.[0];
+            if (!f) {
+                srcBuf = null;
+                $btnExport.disabled = true;
+                $btnPreview.disabled = true;
+                $btnMore.disabled = true;
+                parsed = { sheetName: "", headerIdx: -1, outRows: [], previewTake: 10 };
+                renderPreview();
+                log("Chưa chọn file.");
+                return;
+            }
+            srcBuf = await f.arrayBuffer();
+            $btnExport.disabled = false;
+            $btnPreview.disabled = false;
+            $btnMore.disabled = true;
+            parsed = { sheetName: "", headerIdx: -1, outRows: [], previewTake: 10 };
+            renderPreview();
+            log("Đã nhận file: " + f.name + "\nBấm “Xem trước” hoặc “Xuất 2.xlsx”.");
+        });
+
+        // ---------- helpers ----------
+        function normHeader(s) {
+            return String(s ?? "")
+                .replace(/\r?\n/g, " ")
+                .replace(/\(\s*\*\s*\)/g, "")
+                .replace(/\s+/g, " ")
+                .trim()
+                .toLowerCase();
+        }
+        function s(v) { return (v === null || v === undefined) ? "" : String(v).trim(); }
+        function isRowEmpty(row) {
+            if (!row) return true;
+            return row.every(v => !String(v ?? "").trim());
+        }
+
+        function findHeaderRowIndex(aoa) {
+            const max = Math.min(80, aoa.length);
+            for (let i = 0; i < max; i++) {
+                const row = aoa[i] || [];
+                const hs = row.map(normHeader).filter(Boolean);
+                const hasName = hs.some(x => x.includes("họ và tên"));
+                const hasDocType = hs.some(x => x.includes("loại giấy tờ"));
+                const hasDocNo = hs.some(x => x.includes("số giấy tờ"));
+                if (hasName && hasDocType && hasDocNo) return i;
+            }
+            return -1;
+        }
+
+        function buildColIndexMap(headerRow) {
+            const map = {};
+            for (let c = 0; c < headerRow.length; c++) {
+                const h = normHeader(headerRow[c]);
+                if (!h) continue;
+
+                if (h.includes("stt")) map.stt = c;
+                else if (h.includes("họ và tên")) map.hoten = c;
+                else if (h.includes("ngày") && h.includes("năm sinh")) map.ngaysinh = c;
+                else if (h.includes("giới tính")) map.gioitinh = c;
+                else if (h.includes("quốc gia")) map.quocgia = c;
+                else if (h.includes("quốc tịch")) map.quoctich = c;
+                else if (h.includes("loại giấy tờ")) map.loai_giayto = c;
+                else if (h.includes("tên giấy tờ")) map.ten_giayto = c;
+                else if (h.includes("số giấy tờ")) map.so_giayto = c;
+                else if (h.includes("số điện thoại")) map.sdt = c;
+                else if (h.includes("loại cư trú")) map.loai_cutru = c;
+                else if (h.includes("tỉnh") || h.includes("tinh/tp")) map.tinh = c;
+                else if (h.includes("quận") || h.includes("huyện")) map.quan = c;
+                else if (h.includes("phường") || h.includes("xã") || h.includes("đặc khu") || h.includes("dac khu")) map.phuong = c;
+                else if (h.includes("địa chỉ chi tiết") || h.includes("dia chi chi tiet")) map.diachi_ct = c;
+                else if (h.includes("từ ngày") || (h.includes("thời gian lưu trú") && h.includes("từ"))) map.tungay = c;
+                else if (h.includes("đến ngày") || (h.includes("thời gian lưu trú") && h.includes("đến"))) map.denngay = c;
+                else if (h.includes("lý do lưu trú") || h.includes("ly do")) map.lydo = c;
+                else if (h.includes("tên phòng") || h.includes("phòng") || h.includes("khoa")) map.phongkhoa = c;
+            }
+            return map;
+        }
+
+        // ✅ Rule giấy tờ theo đúng ảnh bạn gửi
+        function applyDocRules(loai, ten, so) {
+            let L = String(loai || "").trim();
+            let T = String(ten || "").trim();
+            let S = String(so || "").trim();
+
+            const upperL = L.toUpperCase();
+            const upperT = T.toUpperCase();
+
+            // Không có giấy tờ
+            if (!L && !T && !S) {
+                return { loai: "Giấy tờ khác", ten: "Giấy tờ khác", so: "012345678999" };
+            }
+
+            // BHYT: rpt có thể ghi "Số thẻ BHYT" ở Loại giấy tờ
+            const isBHYT = upperL.includes("BHYT") || upperT === "BHYT" || upperT.includes("BHYT");
+            if (isBHYT) {
+                return { loai: "Giấy tờ khác", ten: "BHYT", so: S || "012345678999" };
+            }
+
+            // CCCD: Loại giấy tờ là CCCD => cả 2 cột CCCD
+            const isCCCD = (upperL === "CCCD" || upperL.includes("CĂN CƯỚC") || upperL.includes("CAN CUOC"));
+            if (isCCCD) {
+                return { loai: "CCCD", ten: "CCCD", so: S };
+            }
+
+            // Nếu cả 2 là Giấy tờ khác mà số rỗng => gán mặc định
+            if (L === "Giấy tờ khác" && T === "Giấy tờ khác" && !S) {
+                return { loai: "Giấy tờ khác", ten: "Giấy tờ khác", so: "012345678999" };
+            }
+
+            // Còn lại giữ nguyên, nhưng nếu thiếu tên thì fill nhẹ
+            if (!L) L = "Giấy tờ khác";
+            if (!T) T = L;
+
+            return { loai: L, ten: T, so: S };
+        }
+
+        // Header y hệt mẫu 30-1-2 (2 dòng)
+        const headerRow1 = [
+            "STT", "Họ và tên \n(*)", "Ngày, tháng, năm sinh (*)", "Giới tính \n(*)", "Quốc gia\n (*)", "Quốc tịch\n (*)",
+            "Loại giấy tờ (*)", "Tên giấy tờ\n(*)", "Số giấy tờ\n(*)", "Số điện thoại", "Loại cư trú\n (*)", "Tỉnh/TP\n(*)",
+            "Quận/Huyện_cũ\n(*)", "Phường/Xã/ Đặc khu\n(*)", "Địa chỉ chi tiết\n(*)",
+            "Thời gian lưu trú \n(từ ngày) (*)", "Thời gian lưu trú \n(đến ngày)", "Lý do lưu trú (*)", "Tên phòng / Khoa (*)"
+        ];
+
+        const headerRow2 = [
+            "Mẫu dữ liệu", "<Họ và tên gồm chữ cái và ký tự>", "<Giá trị: dd/mm/yyyy>", "<Giá trị: Nam, Nữ>",
+            "<Chọn Quốc gia theo  Sheet Hướng dẫn chọn Quốc Gia - Quốc tịch>>",
+            "<Chọn Quốc tịch theo  Sheet [Hướng dẫn chọn Quốc Gia - Quốc tịch]>",
+            "<CCCD,Hộ chiếu, Giấy tờ khác>",
+            "<Bắt buộc nhập nếu Loại giấy tờ là Giấy tờ khác>",
+            "<Bắt buộc nhập: Số giấy tờ>",
+            "<Không bắt buộc>",
+            "<Các giá trị: Thường trú, tạm trú, Địa chỉ khác>\nngười nước ngoài không bắt buộc nhập",
+            "<Mã địa chính hoặc tên địa chính mới hoặc cũ>",
+            " - Địa chính cũ: Nhập Mã địa chính hoặc tên địa chính \n - Địa chính mới: Để trống",
+            " - Địa chính cũ: nhập Mã địa chính hoặc tên địa chính \n=> Trừ 5 huyện đảo không có phường /xã\n - Địa chính mới: nhập Mã địa chính hoặc tên địa chính ",
+            "<Nhập thông tin địa chỉ chi tiết>",
+            "<dd/mm/yyyy> <hh: mm:ss>\nhoặc\n <yyyy-mm-dd> <hh:mm:ss>",
+            "<dd/mm/yyyy> <hh: mm:ss>\nhoặc\n <yyyy-mm-dd> <hh:mm:ss>",
+            "<Nhập lý do lưu trú>",
+            "< Nhập tên Phòng/Khoa>"
+        ];
+
+        function parseSourceToOutRows(buffer) {
+            const wbSrc = XLSX.read(buffer, { type: "array", cellDates: true });
+            const srcSheetName = wbSrc.SheetNames[0];
+            const wsSrc = wbSrc.Sheets[srcSheetName];
+            const aoa = XLSX.utils.sheet_to_json(wsSrc, { header: 1, defval: "", raw: false });
+
+            const headerIdx = findHeaderRowIndex(aoa);
+            if (headerIdx === -1) {
+                throw new Error("Không tìm thấy dòng header trong rpt (cần có Họ và tên / Loại giấy tờ / Số giấy tờ).");
+            }
+
+            const col = buildColIndexMap(aoa[headerIdx] || []);
+            const startData = headerIdx + 2;
+            const out = [];
+
+            for (let r = startData; r < aoa.length; r++) {
+                const row = aoa[r];
+                if (!row || isRowEmpty(row)) continue;
+
+                const hoten = s(row[col.hoten]);
+                const ngaysinh = s(row[col.ngaysinh]);
+                const gioitinh = s(row[col.gioitinh]);
+                const quocgia = s(row[col.quocgia]) || "VNM";
+                const quoctich = s(row[col.quoctich]) || "VNM";
+
+                let loai_giayto = s(row[col.loai_giayto]);
+                let ten_giayto = s(row[col.ten_giayto]);
+                let so_giayto = s(row[col.so_giayto]);
+
+                const doc = applyDocRules(loai_giayto, ten_giayto, so_giayto);
+                loai_giayto = doc.loai;
+                ten_giayto = doc.ten;
+                so_giayto = doc.so;
+
+                const sdt = s(row[col.sdt]);
+                const loai_cutru = s(row[col.loai_cutru]) || "Tạm trú";
+                const tinh = s(row[col.tinh]);
+                const quan = s(row[col.quan]);
+                const phuong = s(row[col.phuong]);
+
+                let diachi_ct = s(row[col.diachi_ct]);
+                if (!diachi_ct) diachi_ct = phuong;
+
+                const tungay = s(row[col.tungay]);
+                const denngay = s(row[col.denngay]);
+                const lydo = s(row[col.lydo]) || "Khám chữa bệnh";
+                const phongkhoa = s(row[col.phongkhoa]);
+
+                out.push([
+                    "", hoten, ngaysinh, gioitinh, quocgia, quoctich,
+                    loai_giayto, ten_giayto, so_giayto,
+                    sdt, loai_cutru, tinh, quan, phuong, diachi_ct,
+                    tungay, denngay, lydo, phongkhoa
+                ]);
+            }
+
+            out.forEach((row, i) => row[0] = i + 1);
+
+            return { srcSheetName, headerIdx, out };
+        }
+
+        function renderPreview() {
+            const take = parsed.previewTake;
+            const total = parsed.outRows.length;
+
+            $previewMeta.textContent = total
+                ? `Sheet: ${parsed.sheetName} • Header dòng ${parsed.headerIdx + 1} • Preview ${Math.min(take, total)}/${total}`
+                : "Chưa có";
+
+            // header table
+            $previewThead.innerHTML = `
+        <tr>${headerRow1.map(h => `<th>${String(h).replace(/\n/g, "<br/>")}</th>`).join("")}</tr>
+      `;
+
+            // body
+            if (!total) {
+                $previewTbody.innerHTML = `<tr><td class="muted">Chưa có dữ liệu để xem trước.</td></tr>`;
+                return;
+            }
+
+            const slice = parsed.outRows.slice(0, Math.min(take, total));
+            $previewTbody.innerHTML = slice.map(row => {
+                return `<tr>${row.map(v => `<td>${escapeHtml(String(v ?? ""))}</td>`).join("")}</tr>`;
+            }).join("");
+        }
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        $btnPreview.addEventListener("click", () => {
+            try {
+                if (!srcBuf) return;
+                const r = parseSourceToOutRows(srcBuf);
+                parsed.sheetName = r.srcSheetName;
+                parsed.headerIdx = r.headerIdx;
+                parsed.outRows = r.out;
+                parsed.previewTake = 10;
+
+                $btnMore.disabled = parsed.outRows.length <= parsed.previewTake;
+                renderPreview();
+                log("✅ Đã parse dữ liệu để xem trước. Nếu ok thì bấm “Xuất Excel”.");
+            } catch (err) {
+                console.error(err);
+                parsed = { sheetName: "", headerIdx: -1, outRows: [], previewTake: 10 };
+                $btnMore.disabled = true;
+                renderPreview();
+                log("❌ Lỗi xem trước: " + (err?.message || err));
+            }
+        });
+
+        $btnMore.addEventListener("click", () => {
+            if (!parsed.outRows.length) return;
+            parsed.previewTake += 10;
+            if (parsed.previewTake >= parsed.outRows.length) $btnMore.disabled = true;
+            renderPreview();
+        });
+
+        $btnExport.addEventListener("click", () => {
+            try {
+                if (!srcBuf) return;
+
+                // nếu chưa parse preview thì parse luôn
+                if (!parsed.outRows.length) {
+                    const r = parseSourceToOutRows(srcBuf);
+                    parsed.sheetName = r.srcSheetName;
+                    parsed.headerIdx = r.headerIdx;
+                    parsed.outRows = r.out;
+                    parsed.previewTake = 10;
+                    $btnMore.disabled = parsed.outRows.length <= parsed.previewTake;
+                    renderPreview();
+                }
+
+                const wbOut = XLSX.utils.book_new();
+                const wsOut = XLSX.utils.aoa_to_sheet([headerRow1, headerRow2, ...parsed.outRows]);
+
+                wsOut["!cols"] = [
+                    { wch: 6 }, { wch: 26 }, { wch: 16 }, { wch: 10 }, { wch: 10 },
+                    { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 14 },
+                    { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 34 },
+                    { wch: 22 }, { wch: 22 }, { wch: 18 }, { wch: 34 }
+                ];
+
+                XLSX.utils.book_append_sheet(wbOut, wsOut, "File Danh sách khách lưu trú");
+                XLSX.writeFile(wbOut, "BaoCaoLuuTru.xlsx");
+
+                log(
+                    "✅ Đã xuất Excel\n" +
+                    `- Sheet nguồn: ${parsed.sheetName}\n` +
+                    `- Header rpt ở dòng: ${parsed.headerIdx + 1}\n` +
+                    `- Số dòng xuất: ${parsed.outRows.length}\n`
+                );
+            } catch (err) {
+                console.error(err);
+                log("❌ Lỗi xuất file: " + (err?.message || err));
+            }
+        });
+    </script>
+</body>
+
+</html>
