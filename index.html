@@ -451,11 +451,7 @@
                 parsed.outRows = r.out;
 
                 renderPreviewFull();
-                log(
-                    "✅ Đã đọc file & xem trước FULL.\n" +
-                    "Nếu đúng rồi thì bấm “Xuất Excel”.\n" +
-                    `Tổng dòng: ${parsed.outRows.length}`
-                );
+
             } catch (err) {
                 console.error(err);
                 parsed = { sheetName: "", headerIdx: -1, outRows: [] };
@@ -523,6 +519,7 @@
 </body>
 
 </html>
+
 
 
 
