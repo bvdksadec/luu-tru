@@ -14,6 +14,7 @@
         }
 
         .card {
+            max-width: 1280px;
             margin: auto;
             background: rgba(255, 255, 255, .06);
             border: 1px solid rgba(255, 255, 255, .12);
@@ -146,7 +147,7 @@
         tr:hover td {
             background: rgba(255, 255, 255, .04)
         }
-                .copyright {
+        .copyright {
             position: absolute;
             bottom: 2px;
             right: 5px;
@@ -159,19 +160,19 @@
 
 <body>
     <div class="card">
-              <h6 class="copyright">&copy; QUOC IT BVĐK SA ĐÉC</h6>
+      <h6 class="copyright">&copy; QUOC IT BVĐK SA ĐÉC</h6>
 
         <h1>BÁO CÁO LƯU TRÚ</h1>
         <i>Điều trị nội trú -> HDG.Báo cáo lưu trú.</i>
-        
 
         <div class="row">
             <input id="fileSrc" type="file" accept=".xlsx,.xls" />
             <button id="btnExport" disabled>Xuất Excel</button>
         </div>
 
+        <div id="log" class="log">Chưa có dữ liệu.</div>
 
-       <div class="divider"></div>
+        <div class="divider"></div>
 
         <div class="preview-wrap">
             <div class="preview-head">
@@ -451,7 +452,10 @@
                 parsed.outRows = r.out;
 
                 renderPreviewFull();
-
+                log(
+                    "✅ Đã đọc file!\n" +
+                    `Tổng dòng: ${parsed.outRows.length}`
+                );
             } catch (err) {
                 console.error(err);
                 parsed = { sheetName: "", headerIdx: -1, outRows: [] };
@@ -519,10 +523,3 @@
 </body>
 
 </html>
-
-
-
-
-
-
-
